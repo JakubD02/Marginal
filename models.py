@@ -13,18 +13,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from constants import CURRENCY_CODE_LENGTH, NAME_MAX_LENGTH, NOTES_MAX_LENGTH, PRICE_DECIMAL_PLACES, PRICE_MAX_DIGITS
 from enums import CostCategory, Unit
 
 
 class Base(DeclarativeBase):
     pass
-
-
-NAME_MAX_LENGTH = 50
-NOTES_MAX_LENGTH = 500
-CURRENCY_CODE_LENGTH = 3
-PRICE_MAX_DIGITS = 9
-PRICE_DECIMAL_PLACES = 2
 
 
 class Scenario(Base):
