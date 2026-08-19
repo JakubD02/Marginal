@@ -4,16 +4,24 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import (
     CheckConstraint,
-    Enum as SqlEnum,
     ForeignKey,
     Numeric,
     SmallInteger,
     String,
     func,
 )
+from sqlalchemy import (
+    Enum as SqlEnum,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from constants import CURRENCY_CODE_LENGTH, NAME_MAX_LENGTH, NOTES_MAX_LENGTH, PRICE_DECIMAL_PLACES, PRICE_MAX_DIGITS
+from constants import (
+    CURRENCY_CODE_LENGTH,
+    NAME_MAX_LENGTH,
+    NOTES_MAX_LENGTH,
+    PRICE_DECIMAL_PLACES,
+    PRICE_MAX_DIGITS,
+)
 from enums import CostCategory, Unit
 
 
@@ -133,9 +141,7 @@ class RecipeItem(Base):
         ForeignKey("ingredients.id", ondelete="CASCADE"), primary_key=True
     )
     quantity: Mapped[float] = mapped_column(nullable=False)
-    unit: Mapped[Unit] = mapped_column(
-        SqlEnum(Unit, native_enum=False), nullable=False
-    )
+    unit: Mapped[Unit] = mapped_column(SqlEnum(Unit, native_enum=False), nullable=False)
 
     product: Mapped["Product"] = relationship(back_populates="recipe_items")
     ingredient: Mapped["Ingredient"] = relationship(back_populates="recipe_items")
@@ -166,6 +172,4 @@ class SeasonalityFactor(Base):
 
     scenario: Mapped["Scenario"] = relationship(back_populates="seasonality_factors")
 
-    __table_args__ = (
-        CheckConstraint("month BETWEEN 1 AND 12", name="month_range"),
-    )
+    __table_args__ = (CheckConstraint("month BETWEEN 1 AND 12", name="month_range"),)

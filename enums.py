@@ -1,5 +1,6 @@
 from enum import IntEnum, StrEnum
 
+
 class CostCategory(StrEnum):
     RENT = "rent"
     SALARY = "salary"
@@ -12,6 +13,7 @@ class CostCategory(StrEnum):
 
 class Unit(StrEnum):
     """Units of measure - for the ingredient purchase unit and the unit in the recipe line item"""
+
     KG = "kg"
     GRAM = "g"
     LITER = "l"
