@@ -1,0 +1,168 @@
+from uuid import UUID
+
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session, selectinload
+
+from advisor.schemas import (
+    FixedCostCreate,
+    IngredientCreate,
+    ProductCreate,
+    RecipeItemCreate,
+    ScenarioCreate,
+    ScenarioUpdate,
+    SeasonalityFactorCreate,
+    TrafficAssumptionCreate,
+)
+from models import (
+    FixedCost,
+    Ingredient,
+    Product,
+    RecipeItem,
+    Scenario,
+    SeasonalityFactor,
+    TrafficAssumption,
+)
+
+
+# ----- scenario -----
+def create_scenario(session: Session, data: ScenarioCreate) -> Scenario:
+    scenario = Scenario(**data.model_dump())
+    session.add(scenario)
+    session.flush()
+    return scenario
+
+
+def get_scenario(session: Session, scenario_id: UUID) -> Scenario | None:
+    stmt = select(Scenario).where(Scenario.id == scenario_id)
+    return session.execute(stmt).scalar_one_or_none()
+
+
+def get_scenario_by_name(session: Session, name: str) -> Scenario | None:
+    stmt = select(Scenario).where(Scenario.name == name)
+    return session.execute(stmt).scalar_one_or_none()
+
+
+def get_scenario_with_all(session: Session, scenario_id: UUID) -> Scenario | None:
+    stmt = (
+        select(Scenario)
+        .where(Scenario.id == scenario_id)
+        .options(
+            selectinload(Scenario.fixed_costs),
+            selectinload(Scenario.ingredients),
+            selectinload(Scenario.products)
+            .selectinload(Product.recipe_items)
+            .selectinload(RecipeItem.ingredient),
+            selectinload(Scenario.traffic_assumption),
+            selectinload(Scenario.seasonality_factors),
+        )
+    )
+    return session.execute(stmt).scalar_one_or_none()
+
+
+def list_scenarios(session: Session) -> list[Scenario]:
+    stmt = select(Scenario).order_by(Scenario.created_at)
+    return list(session.execute(stmt).scalars().all())
+
+
+def update_scenario(
+    session: Session, scenario_id: UUID, scenario_in: ScenarioUpdate
+) -> Scenario | None:
+    scenario = get_scenario(session=session, scenario_id=scenario_id)
+    if not scenario:
+        return None
+
+    data = scenario_in.model_dump(exclude_unset=True)
+
+    for field, value in data.items():
+        setattr(scenario, field, value)
+
+    return scenario
+
+
+def delete_scenario(session: Session, scenario_id: UUID) -> bool:
+    scenario = get_scenario(session, scenario_id)
+    if not scenario:
+        return False
+
+    session.delete(scenario)
+    return True
+
+
+# ----- fixed cost -----
+def get_fixed_costs_by_scenario(session: Session, scenario_id: UUID) -> list[FixedCost]:
+    stmt = select(FixedCost).where(FixedCost.scenario_id == scenario_id)
+    return list(session.execute(stmt).scalars().all())
+
+
+def add_fixed_cost(
+    session: Session, scenario_id: UUID, data: FixedCostCreate
+) -> FixedCost:
+    cost = FixedCost(scenario_id=scenario_id, **data.model_dump())
+    session.add(cost)
+    session.flush()
+    return cost
+
+
+# ----- product -----
+def add_product(session: Session, scenario_id: UUID, data: ProductCreate) -> Product:
+    product = Product(scenario_id=scenario_id, **data.model_dump())
+    session.add(product)
+    session.flush()
+    return product
+
+
+def get_products_by_scenario(session: Session, scenario_id: UUID) -> list[Product]:
+    stmt = (
+        select(Product)
+        .where(Product.scenario_id == scenario_id)
+        .options(selectinload(Product.recipe_items).selectinload(RecipeItem.ingredient))
+    )
+    return list(session.execute(stmt).scalars().all())
+
+
+# ----- ingredient -----
+def add_ingredient(
+    session: Session, scenario_id: UUID, data: IngredientCreate
+) -> Ingredient:
+    ingredient = Ingredient(scenario_id=scenario_id, **data.model_dump())
+    session.add(ingredient)
+    session.flush()
+    return ingredient
+
+
+# ----- recipe item -----
+def add_recipe_item(
+    session: Session, product_id: UUID, data: RecipeItemCreate
+) -> RecipeItem:
+    recipe_item = RecipeItem(product_id=product_id, **data.model_dump())
+    session.add(recipe_item)
+    session.flush()
+    return recipe_item
+
+
+# ----- traffic_assumption -----
+def add_traffic_assumption(
+    session: Session, scenario_id: UUID, data: TrafficAssumptionCreate
+) -> TrafficAssumption:
+    """Replace existing or create new traffic assumption"""
+    existing = session.get(TrafficAssumption, scenario_id)
+    if existing:
+        session.delete(existing)
+        session.flush()
+    traffic_assumption = TrafficAssumption(scenario_id=scenario_id, **data.model_dump())
+    session.add(traffic_assumption)
+    session.flush()
+    return traffic_assumption
+
+
+# ----- seasonality factor -----
+def set_seasonality(
+    session: Session, scenario_id: UUID, factors: list[SeasonalityFactorCreate]
+) -> None:
+    """Replace all seasonality factors for scenario"""
+    session.execute(
+        delete(SeasonalityFactor).where(SeasonalityFactor.scenario_id == scenario_id)
+    )
+    for factor in factors:
+        session.add(SeasonalityFactor(scenario_id=scenario_id, **factor.model_dump()))
+    session.flush()
