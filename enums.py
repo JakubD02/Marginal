@@ -15,6 +15,7 @@ class Unit(StrEnum):
     """Units of measure - for the ingredient purchase unit and the unit in the recipe line item"""
 
     KG = "kg"
+    DAG = "dag"
     GRAM = "g"
     LITER = "l"
     ML = "ml"

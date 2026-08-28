@@ -1,3 +1,6 @@
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+[project.scripts]
+seed = "scripts.seed:seed"
+smoke-test = "scripts.smoke_test:main"
