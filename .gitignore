@@ -1,0 +1,62 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# ---- Virtual environments ----
+venv/
+.venv/
+env/
+ENV/
+
+# ---- Testing ----
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+
+# ---- Type checking ----
+.mypy_cache/
+.dmypy.json
+.pyre/
+.ruff_cache/
+
+# ---- Databases (local dev) ----
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# ---- Environment variables ----
+.env
+.env.local
+.env.*.local
+
+# ---- IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- macOS ----
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ---- Logs ----
+*.log
+
+# ---- Alembic (opcjonalnie) ----
+# Odkomentuj jeśli NIE chcesz trackować migracji
+# alembic/versions/*.py
