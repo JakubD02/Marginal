@@ -120,6 +120,17 @@ def get_products_by_scenario(session: Session, scenario_id: UUID) -> list[Produc
     return list(session.execute(stmt).scalars().all())
 
 
+def get_product_by_name_in_scenario(
+    session: Session, scenario_id: UUID, product_name: str
+) -> Product | None:
+    stmt = (
+        select(Product)
+        .where(Product.scenario_id == scenario_id, Product.name == product_name)
+        .options(selectinload(Product.recipe_items).selectinload(RecipeItem.ingredient))
+    )
+    return session.execute(stmt).scalar_one_or_none()
+
+
 # ----- ingredient -----
 def add_ingredient(
     session: Session, scenario_id: UUID, data: IngredientCreate
