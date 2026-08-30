@@ -58,9 +58,7 @@ def seed():
                 FixedCost(
                     name="Rent", amount=Decimal(3000), category=CostCategory.RENT
                 ),
-                FixedCost(
-                    name="ZUS", amount=Decimal(1500), category=CostCategory.ZUS
-                ),
+                FixedCost(name="ZUS", amount=Decimal(1500), category=CostCategory.ZUS),
                 FixedCost(
                     name="Energy",
                     amount=Decimal(500),
