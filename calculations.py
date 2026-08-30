@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 from units import convert
 
@@ -9,10 +9,6 @@ from units import convert
 class ContributionMargin:
     per_portion: Decimal
     ratio: float
-
-    def __post_init__(self):
-        cents = Decimal("0.01")
-        self.per_portion = self.per_portion.quantize(cents, rounding=ROUND_HALF_UP)
 
 
 @dataclass
@@ -25,8 +21,27 @@ class MonthlyPnL:
     profit: Decimal
 
 
+@dataclass
+class BreakEvenPoint:
+    portions_monthly: int
+    portions_daily: int
+    customers_daily: int | None
+
+
+@dataclass
+class SimulationResult:
+    scenario_name: str
+    currency: str
+    fixed_costs_monthly: Decimal
+    contribution_margin: ContributionMargin
+    monthly_pnl: list[MonthlyPnL]
+    annual_revenue: Decimal
+    annual_variable_costs: Decimal
+    annual_profit: Decimal
+
+
 def compute_unit_cost(product) -> Decimal:
-    """It calculate cost of manufacturing the product"""
+    """alculate cost of manufacturing one portion"""
     total = Decimal(0)
 
     for item in product.recipe_items:
@@ -48,16 +63,16 @@ def compute_unit_cost(product) -> Decimal:
 
 
 def compute_product_margin(product) -> float:
-    """It allows user to calculate margin per specific product"""
+    """Calculate profit margin for a single product"""
     item_cost = compute_unit_cost(product)
     return float((product.price - item_cost) / product.price)
 
 
 def compute_product_contribution_margin(product) -> ContributionMargin:
-    """It calculate profit on single product"""
+    """Calculate contribution margin for a single product"""
     per_portion = product.price - compute_unit_cost(product)
     ratio = compute_product_margin(product)
-    return ContributionMargin(per_portion, ratio)
+    return ContributionMargin(per_portion=per_portion, ratio=ratio)
 
 
 def compute_scenario_contribution_margin(scenario) -> ContributionMargin:
@@ -86,10 +101,19 @@ def compute_bep(scenario) -> int:
     """To get compute bep (by month), at beginning margin is calculated by average of items"""
     fixed_costs = get_fixed_costs(scenario)
     cm = compute_scenario_contribution_margin(scenario)
-    return math.ceil(fixed_costs / cm.per_portion)
+
+    portions_monthly = math.ceil(fixed_costs / cm.per_portion)
+    portions_daily = math.ceil(portions_monthly / scenario.working_days_per_month)
+
+    customers_daily = None
+    if scenario.traffic_assumption:
+        ppc = scenario.traffic_assumption.avg_products_per_customer
+        customers_daily = math.ceil(portions_daily / ppc)
+
+    return BreakEvenPoint(portions_monthly, portions_daily, customers_daily)
 
 
-def _get_seasonality_for_month(scenario, month) -> float:
+def _get_seasonality_for_month(scenario, month: int) -> float:
     """Get seasonality multiplier for month, or 1.0 if not defined"""
     for factor in scenario.seasonality_factors:
         if factor.month == month:
@@ -97,7 +121,7 @@ def _get_seasonality_for_month(scenario, month) -> float:
     return 1.0
 
 
-def compute_monthly_pnl(scenario, month):
+def compute_monthly_pnl(scenario, month: int) -> MonthlyPnL:
     """Compute profit and loss for a specific month, accounting for seasonality"""
     if not scenario.products:
         raise ValueError("Scenario has no products")
@@ -135,5 +159,28 @@ def compute_monthly_pnl(scenario, month):
     )
 
 
-def run_simulation(scenario):
-    pass
+def run_simulation(scenario) -> SimulationResult:
+    if not scenario.products:
+        raise ValueError("Scenario has no products")
+    if not scenario.fixed_costs:
+        raise ValueError("Scenario has no fixed costs")
+
+    annual_revenue = annual_variable_costs = annual_profit = Decimal(0)
+    monthly_pnl = []
+    for m in range(1, 13):
+        res = compute_monthly_pnl(scenario=scenario, month=m)
+        monthly_pnl.append(res)
+        annual_revenue += res.revenue
+        annual_variable_costs += res.variable_costs
+        annual_profit += res.profit
+
+    return SimulationResult(
+        scenario_name=scenario.name,
+        currency=scenario.currency,
+        fixed_costs_monthly=get_fixed_costs(scenario),
+        contribution_margin=compute_scenario_contribution_margin(scenario),
+        monthly_pnl=monthly_pnl,
+        annual_revenue=annual_revenue,
+        annual_variable_costs=annual_variable_costs,
+        annual_profit=annual_profit,
+    )
