@@ -84,3 +84,22 @@ def show_product(product: Product) -> None:
         print("\n  Recipe items:")
         for item in product.recipe_items:
             print(f"    - {item.quantity} {item.unit.value} of {item.ingredient.name}")
+
+
+def render_products(products: list[Product], currency: str) -> None:
+    """Display list of products in a scenario as a table."""
+    print("\n" + "=" * 70)
+    print(" PRODUCTS ")
+    print("=" * 70)
+    print(f"{'Name':<35} {'Price':>10} {'Category':<15} {'Wastage':>7}")
+    print("-" * 70)
+
+    for product in products:
+        print(
+            f"{product.name:<35} "
+            f"{product.price:>7.2f} {currency:<3} "
+            f"{product.category:<15} "
+            f"{product.wastage_pct * 100:>5.1f}%"
+        )
+
+    print("=" * 70 + "\n")

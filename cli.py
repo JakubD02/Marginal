@@ -3,17 +3,27 @@ from decimal import Decimal
 import typer
 from pydantic import ValidationError
 
-from advisor.schemas import ScenarioCreate, ScenarioUpdate
+from advisor.schemas import ProductCreate, ProductUpdate, ScenarioCreate, ScenarioUpdate
 from calculations import run_simulation
 from database import get_session
-from presenters import render_scenarios, render_simulation, show_product, show_scenario
+from presenters import (
+    render_products,
+    render_scenarios,
+    render_simulation,
+    show_product,
+    show_scenario,
+)
 from repository import (
+    add_product,
     create_scenario,
+    delete_product,
     delete_scenario,
     get_product_by_name_in_scenario,
+    get_products_by_scenario,
     get_scenario_by_name,
     get_scenario_with_all,
     list_scenarios,
+    update_product,
     update_scenario,
 )
 
@@ -68,21 +78,28 @@ def scenario_show(name: str):
 
 
 @scenario_app.command("delete")
-def scenario_delete(name: str):
+def scenario_delete(
+    name: str,
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
+):
     with get_session() as session:
         scenario = get_scenario_by_name(session, name)
         if not scenario:
             typer.echo(f"Scenario '{name}' not found", err=True)
             raise typer.Exit(code=1)
 
-        typer.confirm(
-            f"Are you sure you want to delete '{name}'? this cannot be undone.",
-            abort=True,
-        )
+        if not force:
+            typer.confirm(
+                f"Are you sure you want to delete '{name}'? this cannot be undone.",
+                abort=True,
+            )
 
         res = delete_scenario(session, scenario.id)
         if res:
             typer.echo(f"Successfully removed '{name}'")
+        else:
+            typer.echo(f"Failed to delete '{name}'", err=True)
+            raise typer.Exit(code=1)
 
 
 @scenario_app.command("create")
@@ -99,18 +116,13 @@ def scenario_create(
             typer.echo(f"Scenario '{name}' already exists", err=True)
             raise typer.Exit(code=1)
 
-        if currency is None:
-            currency = typer.prompt("Currency", default="PLN")
-        if working_days is None:
-            working_days = typer.prompt("Working days per month", default=22, type=int)
-
         try:
             data = ScenarioCreate(
                 name=name, currency=currency, working_days_per_month=working_days
             )
         except ValidationError as e:
             typer.echo(f"Invalid input: {e}", err=True)
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from None
 
         scenario = create_scenario(session, data)
         typer.echo(f"✓ Created scenario '{scenario.name}' ({scenario.currency})")
@@ -148,7 +160,7 @@ def scenario_update(
             data = ScenarioUpdate(**update_data)
         except ValidationError as e:
             typer.echo(f"Invalid input: {e}", err=True)
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from None
 
         updated = update_scenario(session, scenario.id, data)
         typer.echo(f"✓ Updated scenario '{updated.name}'")
@@ -171,15 +183,152 @@ def get_product(scenario_name: str, product_name: str):
         show_product(product)
 
 
-# @product_app.command("create")
-# def product_create(
-#     scenario_name: str,
-#     product_name: str,
-#     price: Decimal,
-#     category: str,
-#     wastage_pct: float,
-# ):
-#     pass
+@product_app.command("list")
+def get_products_list(scenario_name: str):
+    with get_session() as session:
+        scenario = get_scenario_by_name(session, scenario_name)
+        if not scenario:
+            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
+            raise typer.Exit(code=1)
+
+        products = get_products_by_scenario(session, scenario.id)
+        if not products:
+            typer.echo(
+                f"No products in '{scenario_name}'. Add one with 'product create'."
+            )
+            return
+
+        render_products(products)
+
+
+@product_app.command("create")
+def product_add(
+    scenario_name: str,
+    product_name: str,
+    price: Decimal | None = typer.Option(None, "--price", "-p", help="Product price"),
+    category: str | None = typer.Option(
+        None, "--category", "-c", help="Product category"
+    ),
+    wastage_pct: float = typer.Option(
+        0.05, "--wastage", "-w", help="Wastage percentage (0.0-1.0)"
+    ),
+):
+    with get_session() as session:
+        scenario = get_scenario_by_name(session, scenario_name)
+        if not scenario:
+            typer.echo(f"Scenario '{scenario_name}' does not exist!", err=True)
+            raise typer.Exit(code=1)
+
+        product = get_product_by_name_in_scenario(session, scenario.id, product_name)
+        if product:
+            typer.echo(f"Product '{product_name}' already exists", err=True)
+            raise typer.Exit(code=1)
+
+        if price is None:
+            price = typer.prompt("Product price", type=Decimal)
+        if category is None:
+            category = typer.prompt("Product category", default="food")
+
+        try:
+            data = ProductCreate(
+                name=product_name,
+                price=price,
+                category=category,
+                wastage_pct=wastage_pct,
+            )
+        except ValidationError as e:
+            typer.echo(f"Invalid input: {e}", err=True)
+            raise typer.Exit(code=1) from None
+
+        product = add_product(session, scenario.id, data)
+        typer.echo(
+            f"✓ Added product '{product.name}' ({product.price} {scenario.currency})"
+        )
+
+
+@product_app.command("update")
+def product_update(
+    scenario_name: str,
+    product_name: str,
+    new_name: str | None = typer.Option(None, "--name", "-n", help="New name"),
+    price: Decimal | None = typer.Option(None, "--price", "-p", help="Product price"),
+    category: str | None = typer.Option(
+        None, "--category", "-c", help="Product category"
+    ),
+    wastage_pct: float | None = typer.Option(
+        None, "--wastage", "-w", help="Wastage percentage (0.0-1.0)"
+    ),
+):
+    with get_session() as session:
+        scenario = get_scenario_by_name(session, scenario_name)
+        if not scenario:
+            typer.echo(f"Scenario '{scenario_name}' does not exists!", err=True)
+            raise typer.Exit(code=1)
+
+        product = get_product_by_name_in_scenario(session, scenario.id, product_name)
+        if not product:
+            typer.echo(
+                f"Product '{product_name}' not found in '{scenario_name}'", err=True
+            )
+            raise typer.Exit(code=1)
+
+        update_data = {}
+        if new_name is not None:
+            update_data["name"] = new_name
+        if price is not None:
+            update_data["price"] = price
+        if category is not None:
+            update_data["category"] = category
+        if wastage_pct is not None:
+            update_data["wastage_pct"] = wastage_pct
+
+        if not update_data:
+            typer.echo(
+                "No fields to update. Use --name, --price, --category, or --wastage.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
+        try:
+            data = ProductUpdate(**update_data)
+        except ValidationError as e:
+            typer.echo(f"Invalid input: {e}", err=True)
+            raise typer.Exit(code=1) from None
+
+        updated = update_product(session, scenario.id, product_name, data)
+        typer.echo(f"✓ Updated product '{updated.name}'")
+
+
+@product_app.command("delete")
+def product_delete(
+    scenario_name: str,
+    product_name: str,
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
+):
+    with get_session() as session:
+        scenario = get_scenario_by_name(session, scenario_name)
+        if not scenario:
+            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
+            raise typer.Exit(code=1)
+        product = get_product_by_name_in_scenario(session, scenario.id, product_name)
+        if not product:
+            typer.echo(
+                f"Product '{product_name}' not found in '{scenario_name}'", err=True
+            )
+            raise typer.Exit(code=1)
+
+        if not force:
+            typer.confirm(
+                f"Are you sure you want to delete '{product_name}'? this cannot be undone.",
+                abort=True,
+            )
+
+        res = delete_product(session, scenario.id, product_name)
+        if res:
+            typer.echo(f"Successfully removed '{product_name}'")
+        else:
+            typer.echo(f"Failed to delete '{product_name}'", err=True)
+            raise typer.Exit(code=1)
 
 
 # ----- fixed_cost -----
