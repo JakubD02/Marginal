@@ -7,6 +7,7 @@ from advisor.schemas import (
     FixedCostCreate,
     IngredientCreate,
     ProductCreate,
+    ProductUpdate,
     RecipeItemCreate,
     ScenarioCreate,
     ScenarioUpdate,
@@ -76,6 +77,7 @@ def update_scenario(
     for field, value in data.items():
         setattr(scenario, field, value)
 
+    session.flush()
     return scenario
 
 
@@ -85,6 +87,7 @@ def delete_scenario(session: Session, scenario_id: UUID) -> bool:
         return False
 
     session.delete(scenario)
+    session.flush()
     return True
 
 
@@ -131,11 +134,36 @@ def get_product_by_name_in_scenario(
     return session.execute(stmt).scalar_one_or_none()
 
 
+def update_product(
+    session: Session, scenario_id: UUID, product_name: str, product_in: ProductUpdate
+) -> Product | None:
+    product = get_product_by_name_in_scenario(session, scenario_id, product_name)
+    if not product:
+        return None
+
+    data = product_in.model_dump(exclude_unset=True)
+    for field, value in data.items():
+        setattr(product, field, value)
+
+    session.flush()
+    return product
+
+
+def delete_product(session: Session, scenario_id: UUID, product_name: str) -> bool:
+    product = get_product_by_name_in_scenario(session, scenario_id, product_name)
+    if not product:
+        return False
+
+    session.delete(product)
+    session.flush()
+    return True
+
+
 # ----- ingredient -----
 def add_ingredient(
     session: Session, scenario_id: UUID, data: IngredientCreate
 ) -> Ingredient:
-    ingredient = Ingredient(scenario_id=scenario_id, **data.model_dump())
+    ingredient = Ingredient(scenario_id, **data.model_dump())
     session.add(ingredient)
     session.flush()
     return ingredient
