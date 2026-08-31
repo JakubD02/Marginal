@@ -9,6 +9,8 @@ from advisor.schemas import (
     ProductUpdate,
     ScenarioCreate,
     ScenarioUpdate,
+    SeasonalityFactorCreate,
+    TrafficAssumptionCreate,
 )
 from calculations import run_simulation
 from database import get_session
@@ -17,7 +19,9 @@ from presenters import (
     render_fixed_costs,
     render_products,
     render_scenarios,
+    render_seasonality,
     render_simulation,
+    render_traffic_assumption,
     show_product,
     show_scenario,
 )
@@ -34,7 +38,11 @@ from repository import (
     get_products_by_scenario,
     get_scenario_by_name,
     get_scenario_with_all,
+    get_seasonality_by_scenario,
+    get_traffic_assumption_by_scenario,
     list_scenarios,
+    set_seasonality_for_month,
+    set_traffic_assumption,
     update_product,
     update_scenario,
 )
@@ -49,6 +57,12 @@ app.add_typer(product_app, name="product")
 
 fixed_cost_app = typer.Typer(help="Fixed cost")
 app.add_typer(fixed_cost_app, name="fixed-cost")
+
+traffic_assumption_app = typer.Typer(help="Traffic assumption")
+app.add_typer(traffic_assumption_app, name="traffic-assumption")
+
+seasonality_app = typer.Typer(help="Seasonality factor")
+app.add_typer(seasonality_app, name="seasonality")
 
 
 @app.command()
@@ -454,9 +468,115 @@ def fixed_cost_delete(
 
 
 # ----- traffic assumption -----
+@traffic_assumption_app.command("set")
+def traffic_assumption_set(
+    scenario_name: str,
+    daily_customers: int = typer.Option(
+        None, "--customers", "-c", help="Daily customers"
+    ),
+    avg_product_per_customer: float = typer.Option(
+        None, "--avg-product", "-ap", help="Average product per customer"
+    ),
+):
+    with get_session() as session:
+        scenario = get_scenario_by_name(session, scenario_name)
+        if not scenario:
+            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
+            raise typer.Exit(code=1)
+
+        if daily_customers is None:
+            daily_customers = typer.prompt("Daily customers")
+        if avg_product_per_customer is None:
+            avg_product_per_customer = typer.prompt("Average product per customer")
+
+        try:
+            data = TrafficAssumptionCreate(
+                daily_customers=daily_customers,
+                avg_products_per_customer=avg_product_per_customer,
+            )
+        except ValidationError as e:
+            typer.echo(f"Invalid input: {e}", err=True)
+            raise typer.Exit(code=1) from None
+
+        traffic = set_traffic_assumption(session, scenario.id, data)
+        typer.echo(
+            f"✓ Traffic set for '{scenario.name}': "
+            f"{traffic.daily_customers} customers/day, "
+            f"{traffic.avg_products_per_customer} products/customer"
+        )
+
+
+@traffic_assumption_app.command("get")
+def traffic_assumption_factor(scenario_name: str):
+    with get_session() as session:
+        scenario = get_scenario_by_name(session, scenario_name)
+        if not scenario:
+            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
+            raise typer.Exit(code=1)
+
+        traffic = get_traffic_assumption_by_scenario(session, scenario.id)
+        if not traffic:
+            typer.echo(
+                f"No traffic assumption for '{scenario_name}'. "
+                f"Set with 'traffic-assumption set'."
+            )
+            return
+
+        render_traffic_assumption(traffic, scenario.name)
 
 
 # ----- seasonality factor -----
+
+
+@seasonality_app.command("set")
+def seasonality_factor_set(
+    scenario_name: str,
+    month: int | None = typer.Option(None, "--month", "-m", help="Month (1-12)"),
+    multiplier: float | None = typer.Option(
+        None, "--multiplier", "-x", help="Seasonality multiplier"
+    ),
+):
+    with get_session() as session:
+        scenario = get_scenario_by_name(session, scenario_name)
+        if not scenario:
+            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
+            raise typer.Exit(code=1)
+
+        if month is None:
+            month = typer.prompt("Month (1-12)", type=int)
+        if multiplier is None:
+            multiplier = typer.prompt("Multiplier", type=float)
+
+        try:
+            data = SeasonalityFactorCreate(month=month, multiplier=multiplier)
+        except ValidationError as e:
+            typer.echo(f"Invalid input: {e}", err=True)
+            raise typer.Exit(code=1) from None
+
+        factor = set_seasonality_for_month(session, scenario.id, data)
+        typer.echo(
+            f"✓ Seasonality set for '{scenario.name}': "
+            f"month {factor.month} = {factor.multiplier}x"
+        )
+
+
+@seasonality_app.command("list")
+def seasonality_list(scenario_name: str):
+    with get_session() as session:
+        scenario = get_scenario_by_name(session, scenario_name)
+        if not scenario:
+            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
+            raise typer.Exit(code=1)
+
+        factors = get_seasonality_by_scenario(session, scenario.id)
+        if not factors:
+            typer.echo(
+                f"No seasonality factors for '{scenario_name}'. "
+                f"Set with 'seasonality set'."
+            )
+            return
+
+        render_seasonality(factors)
 
 
 if __name__ == "__main__":

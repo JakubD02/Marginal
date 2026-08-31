@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from calculations import SimulationResult
-from models import FixedCost, Product, Scenario
+from models import FixedCost, Product, Scenario, SeasonalityFactor, TrafficAssumption
 
 
 def render_simulation(result: SimulationResult) -> None:
@@ -130,3 +130,45 @@ def render_fixed_costs(costs: list[FixedCost], currency: str) -> None:
     print("-" * 70)
     print(f"{'Total':<25} {'':<15} {total:>8.2f} {currency:<3}")
     print("=" * 70 + "\n")
+
+
+def render_traffic_assumption(traffic: TrafficAssumption, scenario_name: str) -> None:
+    """Display traffic assumption"""
+    print(f"\nTraffic assumption for '{scenario_name}':")
+    print(f"  Daily customers:              {traffic.daily_customers}")
+    print(f"  Products per customer (avg):  {traffic.avg_products_per_customer}")
+
+
+def render_seasonality(factors: list[SeasonalityFactor]) -> None:
+    """Display seasonality factors as a table."""
+    month_names = {
+        1: "January",
+        2: "February",
+        3: "March",
+        4: "April",
+        5: "May",
+        6: "June",
+        7: "July",
+        8: "August",
+        9: "September",
+        10: "October",
+        11: "November",
+        12: "December",
+    }
+
+    print("\n" + "=" * 40)
+    print(" SEASONALITY FACTORS ")
+    print("=" * 40)
+    print(f"{'Month':<15} {'Multiplier':>10}")
+    print("-" * 40)
+
+    for factor in factors:
+        name = month_names.get(factor.month, str(factor.month))
+        marker = ""
+        if factor.multiplier > 1.5:
+            marker = " (high)"
+        elif factor.multiplier < 0.5:
+            marker = " (low)"
+        print(f"{name:<15} {factor.multiplier:>10.2f}{marker}")
+
+    print("=" * 40 + "\n")

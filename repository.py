@@ -201,22 +201,67 @@ def add_recipe_item(
 
 
 # ----- traffic_assumption -----
-def add_traffic_assumption(
+def set_traffic_assumption(
     session: Session, scenario_id: UUID, data: TrafficAssumptionCreate
 ) -> TrafficAssumption:
-    """Replace existing or create new traffic assumption"""
-    existing = session.get(TrafficAssumption, scenario_id)
+    """Upsert traffic assumption for a scenario"""
+    existing = session.execute(
+        select(TrafficAssumption).where(TrafficAssumption.scenario_id == scenario_id)
+    ).scalar_one_or_none()
     if existing:
-        session.delete(existing)
+        existing.daily_customers = data.daily_customers
+        existing.avg_products_per_customer = data.avg_products_per_customer
         session.flush()
+        return existing
+
     traffic_assumption = TrafficAssumption(scenario_id=scenario_id, **data.model_dump())
     session.add(traffic_assumption)
     session.flush()
     return traffic_assumption
 
 
+def get_traffic_assumption_by_scenario(
+    session: Session, scenario_id: UUID
+) -> TrafficAssumption:
+    stmt = select(TrafficAssumption).where(TrafficAssumption.scenario_id == scenario_id)
+    return session.execute(stmt).scalar_one_or_none()
+
+
 # ----- seasonality factor -----
-def set_seasonality(
+def set_seasonality_for_month(
+    session: Session, scenario_id: UUID, data: SeasonalityFactorCreate
+) -> SeasonalityFactor:
+    """Upsert seasonality for a specific month"""
+    existing = session.execute(
+        select(SeasonalityFactor).where(
+            SeasonalityFactor.scenario_id == scenario_id,
+            SeasonalityFactor.month == data.month,
+        )
+    ).scalar_one_or_none()
+
+    if existing:
+        existing.multiplier = data.multiplier
+        session.flush()
+        return existing
+
+    factor = SeasonalityFactor(scenario_id=scenario_id, **data.model_dump())
+    session.add(factor)
+    session.flush()
+    return factor
+
+
+def get_seasonality_by_scenario(
+    session: Session, scenario_id: UUID
+) -> SeasonalityFactor:
+    stmt = (
+        select(SeasonalityFactor)
+        .where(SeasonalityFactor.scenario_id == scenario_id)
+        .order_by(SeasonalityFactor.month)
+    )
+    return list(session.execute(stmt).scalars().all())
+
+
+def set_all_seasonality(
     session: Session, scenario_id: UUID, factors: list[SeasonalityFactorCreate]
 ) -> None:
     """Replace all seasonality factors for scenario"""
