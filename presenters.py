@@ -1,5 +1,7 @@
+from decimal import Decimal
+
 from calculations import SimulationResult
-from models import Product, Scenario
+from models import FixedCost, Product, Scenario
 
 
 def render_simulation(result: SimulationResult) -> None:
@@ -102,4 +104,29 @@ def render_products(products: list[Product], currency: str) -> None:
             f"{product.wastage_pct * 100:>5.1f}%"
         )
 
+    print("=" * 70 + "\n")
+
+
+def render_fixed_costs(costs: list[FixedCost], currency: str) -> None:
+    """Display list of fixed costs as a table"""
+    print("\n" + "=" * 70)
+    print(" FIXED COSTS ")
+    print("=" * 70)
+    print(f"{'Name':<25} {'Category':<15} {'Amount':>12} {'Notes':<20}")
+    print("-" * 70)
+
+    total = Decimal("0")
+    for cost in costs:
+        notes = cost.notes or ""
+        notes_short = notes[:17] + "..." if len(notes) > 20 else notes
+        print(
+            f"{cost.name:<25} "
+            f"{cost.category.value:<15} "
+            f"{cost.amount:>8.2f} {currency:<3} "
+            f"{notes_short:<20}"
+        )
+        total += cost.amount
+
+    print("-" * 70)
+    print(f"{'Total':<25} {'':<15} {total:>8.2f} {currency:<3}")
     print("=" * 70 + "\n")

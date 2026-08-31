@@ -97,6 +97,15 @@ def get_fixed_costs_by_scenario(session: Session, scenario_id: UUID) -> list[Fix
     return list(session.execute(stmt).scalars().all())
 
 
+def get_fixed_cost_by_name(
+    session: Session, scenario_id: UUID, name: str
+) -> Scenario | None:
+    stmt = select(FixedCost).where(
+        FixedCost.name == name, FixedCost.scenario_id == scenario_id
+    )
+    return session.execute(stmt).scalar_one_or_none()
+
+
 def add_fixed_cost(
     session: Session, scenario_id: UUID, data: FixedCostCreate
 ) -> FixedCost:
@@ -104,6 +113,18 @@ def add_fixed_cost(
     session.add(cost)
     session.flush()
     return cost
+
+
+def delete_fixed_cost(
+    session: Session, scenario_id: UUID, fixed_cost_name: str
+) -> bool:
+    fixed_cost = get_fixed_cost_by_name(session, scenario_id, fixed_cost_name)
+    if not fixed_cost:
+        return False
+
+    session.delete(fixed_cost)
+    session.flush()
+    return True
 
 
 # ----- product -----
