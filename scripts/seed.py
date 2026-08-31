@@ -42,7 +42,7 @@ def seed():
         if existing:
             print(f"Removing {len(existing)} existing scenario...")
             for scenario in existing:
-                session.delete(session)
+                session.delete(scenario)
             session.flush()
 
         # --- Scenario ---
