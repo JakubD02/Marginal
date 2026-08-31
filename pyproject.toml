@@ -11,3 +11,12 @@ smoke-test = "scripts.smoke_test:main"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "N", "UP", "B",
+]
+ignore = [
+    "E501",  # line too long
+    "B008",  # function call in argument defaults (needed for Typer)
+]
