@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import typer
 from pydantic import ValidationError
+from sqlalchemy.orm import Session
 
 from advisor.schemas import (
     FixedCostCreate,
@@ -15,6 +16,7 @@ from advisor.schemas import (
 from calculations import run_simulation
 from database import get_session
 from enums import CostCategory
+from models import Product, Scenario
 from presenters import (
     render_fixed_costs,
     render_products,
@@ -65,14 +67,31 @@ seasonality_app = typer.Typer(help="Seasonality factor")
 app.add_typer(seasonality_app, name="seasonality")
 
 
+def _get_scenario_or_exit(session: Session, name: str) -> Scenario:
+    """Get scenario by name or exit with error message"""
+    scenario = get_scenario_by_name(session, name)
+    if not scenario:
+        typer.echo(f"Scenario '{name}' not found", err=True)
+        raise typer.Exit(code=1)
+    return scenario
+
+
+def _get_product_or_exit(
+    session: Session, scenario: Scenario, product_name: str
+) -> Product:
+    """Get product by name or exit with error message"""
+    product = get_product_by_name_in_scenario(session, scenario.id, product_name)
+    if not product:
+        typer.echo(f"Product '{product_name}' not found", err=True)
+        raise typer.Exit(code=1)
+    return product
+
+
 @app.command()
 def simulate(scenario_name: str):
     """Run full simulation for scenario"""
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
-            raise typer.Exit(code=1)
+        scenario = _get_scenario_or_exit(session, scenario_name)
 
         result = run_simulation(scenario)
         render_simulation(result)
@@ -94,60 +113,52 @@ def scenario_list():
 
 
 @scenario_app.command("show")
-def scenario_show(name: str):
+def scenario_show(scenario_name: str):
     """Show scenario details"""
     with get_session() as session:
-        scenario = get_scenario_by_name(session, name)
-        if not scenario:
-            typer.echo(f"Scenario '{name}' not found", err=True)
-            raise typer.Exit(code=1)
-
-        scenario = get_scenario_with_all(session, scenario.id)
-        show_scenario(scenario)
+        scenario = _get_scenario_or_exit(session, scenario_name)
+        show_scenario(get_scenario_with_all(session, scenario.id))
 
 
 @scenario_app.command("delete")
 def scenario_delete(
-    name: str,
+    scenario_name: str,
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, name)
-        if not scenario:
-            typer.echo(f"Scenario '{name}' not found", err=True)
-            raise typer.Exit(code=1)
-
+        scenario = _get_scenario_or_exit(session, scenario_name)
         if not force:
             typer.confirm(
-                f"Are you sure you want to delete '{name}'? this cannot be undone.",
+                f"Are you sure you want to delete '{scenario_name}'? this cannot be undone.",
                 abort=True,
             )
 
         res = delete_scenario(session, scenario.id)
         if res:
-            typer.echo(f"Successfully removed '{name}'")
+            typer.echo(f"✓ Deleted product '{scenario_name}'")
         else:
-            typer.echo(f"Failed to delete '{name}'", err=True)
+            typer.echo(f"Failed to delete '{scenario_name}'", err=True)
             raise typer.Exit(code=1)
 
 
 @scenario_app.command("create")
 def scenario_create(
-    name: str,
+    scenario_name: str,
     currency: str = typer.Option("PLN", "--currency", "-c", help="Currency code"),
     working_days: int = typer.Option(
         22, "--working-days", "-w", help="Working days per month"
     ),
 ):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, name)
-        if scenario:
-            typer.echo(f"Scenario '{name}' already exists", err=True)
+        existing = get_scenario_by_name(session, scenario_name)
+        if existing:
+            typer.echo(f"Scenario '{scenario_name}' already exists", err=True)
             raise typer.Exit(code=1)
-
         try:
             data = ScenarioCreate(
-                name=name, currency=currency, working_days_per_month=working_days
+                name=scenario_name,
+                currency=currency,
+                working_days_per_month=working_days,
             )
         except ValidationError as e:
             typer.echo(f"Invalid input: {e}", err=True)
@@ -159,16 +170,13 @@ def scenario_create(
 
 @scenario_app.command("update")
 def scenario_update(
-    name: str,
+    scenario_name: str,
     new_name: str | None = typer.Option(None, "--name", help="New name"),
     currency: str | None = typer.Option(None, "--currency", "-c"),
     working_days: int | None = typer.Option(None, "--working-days", "-w"),
 ):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, name)
-        if not scenario:
-            typer.echo(f"Scenario '{name}' not found", err=True)
-            raise typer.Exit(code=1)
+        scenario = _get_scenario_or_exit(session, scenario_name)
 
         update_data = {}
         if new_name is not None:
@@ -199,27 +207,15 @@ def scenario_update(
 @product_app.command("get")
 def get_product(scenario_name: str, product_name: str):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
-            raise typer.Exit(code=1) from None
-
-        product = get_product_by_name_in_scenario(session, scenario.id, product_name)
-        if not product:
-            typer.echo(f"Product '{product_name}' not found", err=True)
-            raise typer.Exit(code=1) from None
-
+        scenario = _get_scenario_or_exit(session, scenario_name)
+        product = _get_product_or_exit(session, scenario, product_name)
         show_product(product)
 
 
 @product_app.command("list")
 def get_products_list(scenario_name: str):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
-            raise typer.Exit(code=1)
-
+        scenario = _get_scenario_or_exit(session, scenario_name)
         products = get_products_by_scenario(session, scenario.id)
         if not products:
             typer.echo(
@@ -227,7 +223,7 @@ def get_products_list(scenario_name: str):
             )
             return
 
-        render_products(products)
+        render_products(products, scenario.currency)
 
 
 @product_app.command("create")
@@ -243,14 +239,13 @@ def product_add(
     ),
 ):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' does not exist!", err=True)
-            raise typer.Exit(code=1)
-
-        product = get_product_by_name_in_scenario(session, scenario.id, product_name)
-        if product:
-            typer.echo(f"Product '{product_name}' already exists", err=True)
+        scenario = _get_scenario_or_exit(session, scenario_name)
+        existing = get_product_by_name_in_scenario(session, scenario.id, product_name)
+        if existing:
+            typer.echo(
+                f"Product '{product_name}' already exists in '{scenario_name}'",
+                err=True,
+            )
             raise typer.Exit(code=1)
 
         if price is None:
@@ -295,17 +290,8 @@ def product_update(
     ),
 ):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' does not exists!", err=True)
-            raise typer.Exit(code=1)
-
-        product = get_product_by_name_in_scenario(session, scenario.id, product_name)
-        if not product:
-            typer.echo(
-                f"Product '{product_name}' not found in '{scenario_name}'", err=True
-            )
-            raise typer.Exit(code=1)
+        scenario = _get_scenario_or_exit(session, scenario_name)
+        _get_product_or_exit(session, scenario, product_name)
 
         update_data = {}
         if new_name is not None:
@@ -346,16 +332,8 @@ def product_delete(
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
-            raise typer.Exit(code=1)
-        product = get_product_by_name_in_scenario(session, scenario.id, product_name)
-        if not product:
-            typer.echo(
-                f"Product '{product_name}' not found in '{scenario_name}'", err=True
-            )
-            raise typer.Exit(code=1)
+        scenario = _get_scenario_or_exit(session, scenario_name)
+        _get_product_or_exit(session, scenario, product_name)
 
         if not force:
             typer.confirm(
@@ -365,7 +343,7 @@ def product_delete(
 
         res = delete_product(session, scenario.id, product_name)
         if res:
-            typer.echo(f"Successfully removed '{product_name}'")
+            typer.echo(f"✓ Deleted product '{product_name}'")
         else:
             typer.echo(f"Failed to delete '{product_name}'", err=True)
             raise typer.Exit(code=1)
@@ -377,11 +355,7 @@ def fixed_cost_list(
     scenario_name: str,
 ):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
-            raise typer.Exit(code=1)
-
+        scenario = _get_scenario_or_exit(session, scenario_name)
         costs = get_fixed_costs_by_scenario(session, scenario.id)
         if not costs:
             typer.echo(
@@ -396,26 +370,24 @@ def fixed_cost_list(
 def fixed_cost_add(
     scenario_name: str,
     cost_name: str = typer.Argument(None, help="Cost name"),
-    amount: str = typer.Argument(None, help="Amount"),
+    amount: str | None = typer.Argument(None, help="Amount"),
     category: CostCategory = typer.Option(
         CostCategory.OTHER, "--category", "-c", help="Cost category"
     ),
     notes: str | None = typer.Option(None, "--notes", "-n", help="Notes"),
 ):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
-            raise typer.Exit(code=1)
-        fixed_cost = get_fixed_cost_by_name(session, scenario.id, cost_name)
-        if fixed_cost:
-            typer.echo(f"Fixed cost '{fixed_cost.name}' already exists", err=True)
-            raise typer.Exit(code=1)
+        scenario = _get_scenario_or_exit(session, scenario_name)
 
         if cost_name is None:
             cost_name = typer.prompt("Cost name")
         if amount is None:
             amount = typer.prompt("Amount")
+
+        fixed_cost = get_fixed_cost_by_name(session, scenario.id, cost_name)
+        if fixed_cost:
+            typer.echo(f"Fixed cost '{fixed_cost.name}' already exists", err=True)
+            raise typer.Exit(code=1)
 
         try:
             amount = Decimal(amount)
@@ -435,8 +407,7 @@ def fixed_cost_add(
             raise typer.Exit(code=1) from None
 
         fixed_cost = add_fixed_cost(session, scenario.id, data)
-        typer.echo(f"✓ Created fixed cost '{fixed_cost.name}'")
-
+        typer.echo(f"✓ Added fixed cost '{fixed_cost.name}' ({fixed_cost.amount} {scenario.currency})")
 
 @fixed_cost_app.command("delete")
 def fixed_cost_delete(
@@ -445,10 +416,7 @@ def fixed_cost_delete(
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
-            raise typer.Exit(code=1)
+        scenario = _get_scenario_or_exit(session, scenario_name)
         fixed_cost = get_fixed_cost_by_name(session, scenario.id, fixed_cost_name)
         if not fixed_cost:
             typer.echo(f"Fixed cost '{fixed_cost_name}' not found", err=True)
@@ -461,7 +429,7 @@ def fixed_cost_delete(
 
         res = delete_fixed_cost(session, scenario.id, fixed_cost_name)
         if res:
-            typer.echo(f"Successfully removed '{fixed_cost_name}'")
+            typer.echo(f"✓ Deleted fixed cost '{fixed_cost_name}'")
         else:
             typer.echo(f"Failed to delete '{fixed_cost_name}'", err=True)
             raise typer.Exit(code=1)
@@ -471,23 +439,21 @@ def fixed_cost_delete(
 @traffic_assumption_app.command("set")
 def traffic_assumption_set(
     scenario_name: str,
-    daily_customers: int = typer.Option(
+    daily_customers: int | None = typer.Option(
         None, "--customers", "-c", help="Daily customers"
     ),
-    avg_product_per_customer: float = typer.Option(
+    avg_product_per_customer: float | None = typer.Option(
         None, "--avg-product", "-ap", help="Average product per customer"
     ),
 ):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
-            raise typer.Exit(code=1)
-
+        scenario = _get_scenario_or_exit(session, scenario_name)
         if daily_customers is None:
-            daily_customers = typer.prompt("Daily customers")
+            daily_customers = typer.prompt("Daily customers", type=int)
         if avg_product_per_customer is None:
-            avg_product_per_customer = typer.prompt("Average product per customer")
+            avg_product_per_customer = typer.prompt(
+                "Average product per customer", type=float
+            )
 
         try:
             data = TrafficAssumptionCreate(
@@ -507,13 +473,9 @@ def traffic_assumption_set(
 
 
 @traffic_assumption_app.command("get")
-def traffic_assumption_factor(scenario_name: str):
+def traffic_assumption(scenario_name: str):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
-            raise typer.Exit(code=1)
-
+        scenario = _get_scenario_or_exit(session, scenario_name)
         traffic = get_traffic_assumption_by_scenario(session, scenario.id)
         if not traffic:
             typer.echo(
@@ -537,11 +499,7 @@ def seasonality_factor_set(
     ),
 ):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
-            raise typer.Exit(code=1)
-
+        scenario = _get_scenario_or_exit(session, scenario_name)
         if month is None:
             month = typer.prompt("Month (1-12)", type=int)
         if multiplier is None:
@@ -563,11 +521,7 @@ def seasonality_factor_set(
 @seasonality_app.command("list")
 def seasonality_list(scenario_name: str):
     with get_session() as session:
-        scenario = get_scenario_by_name(session, scenario_name)
-        if not scenario:
-            typer.echo(f"Scenario '{scenario_name}' not found", err=True)
-            raise typer.Exit(code=1)
-
+        scenario = _get_scenario_or_exit(session, scenario_name)
         factors = get_seasonality_by_scenario(session, scenario.id)
         if not factors:
             typer.echo(
