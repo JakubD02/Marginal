@@ -1,7 +1,13 @@
 from decimal import Decimal
 
-from calculations import SimulationResult
-from models import FixedCost, Product, Scenario, SeasonalityFactor, TrafficAssumption
+from marginal.calculations import SimulationResult
+from marginal.models import (
+    FixedCost,
+    Product,
+    Scenario,
+    SeasonalityFactor,
+    TrafficAssumption,
+)
 
 
 def render_simulation(result: SimulationResult) -> None:

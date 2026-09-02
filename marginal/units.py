@@ -1,6 +1,6 @@
 """Unit conversion for ingredient quantities"""
 
-from enums import Unit
+from marginal.enums import Unit
 
 _MASS = {Unit.KG, Unit.DAG, Unit.GRAM}
 _VOLUME = {Unit.LITER, Unit.ML}

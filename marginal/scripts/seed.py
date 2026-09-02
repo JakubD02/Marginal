@@ -2,9 +2,9 @@ from decimal import Decimal
 
 from sqlalchemy import select
 
-from database import get_session
-from enums import CostCategory, Month, Unit
-from models import (
+from marginal.database import get_session
+from marginal.enums import CostCategory, Month, Unit
+from marginal.models import (
     FixedCost,
     Ingredient,
     Product,

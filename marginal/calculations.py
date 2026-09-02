@@ -2,7 +2,7 @@ import math
 from dataclasses import dataclass
 from decimal import Decimal
 
-from units import convert
+from marginal.units import convert
 
 
 @dataclass

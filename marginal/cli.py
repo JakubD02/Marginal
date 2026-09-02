@@ -4,20 +4,11 @@ import typer
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from advisor.schemas import (
-    FixedCostCreate,
-    ProductCreate,
-    ProductUpdate,
-    ScenarioCreate,
-    ScenarioUpdate,
-    SeasonalityFactorCreate,
-    TrafficAssumptionCreate,
-)
-from calculations import run_simulation
-from database import get_session
-from enums import CostCategory
-from models import Product, Scenario
-from presenters import (
+from marginal.calculations import run_simulation
+from marginal.database import get_session
+from marginal.enums import CostCategory
+from marginal.models import Product, Scenario
+from marginal.presenters import (
     render_fixed_costs,
     render_products,
     render_scenarios,
@@ -27,7 +18,7 @@ from presenters import (
     show_product,
     show_scenario,
 )
-from repository import (
+from marginal.repository import (
     add_fixed_cost,
     add_product,
     create_scenario,
@@ -47,6 +38,15 @@ from repository import (
     set_traffic_assumption,
     update_product,
     update_scenario,
+)
+from marginal.schemas import (
+    FixedCostCreate,
+    ProductCreate,
+    ProductUpdate,
+    ScenarioCreate,
+    ScenarioUpdate,
+    SeasonalityFactorCreate,
+    TrafficAssumptionCreate,
 )
 
 app = typer.Typer(help="Marginal - business profitability simulator")
@@ -407,7 +407,10 @@ def fixed_cost_add(
             raise typer.Exit(code=1) from None
 
         fixed_cost = add_fixed_cost(session, scenario.id, data)
-        typer.echo(f"✓ Added fixed cost '{fixed_cost.name}' ({fixed_cost.amount} {scenario.currency})")
+        typer.echo(
+            f"✓ Added fixed cost '{fixed_cost.name}' ({fixed_cost.amount} {scenario.currency})"
+        )
+
 
 @fixed_cost_app.command("delete")
 def fixed_cost_delete(

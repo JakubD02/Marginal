@@ -3,7 +3,16 @@ from uuid import UUID
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
-from advisor.schemas import (
+from marginal.models import (
+    FixedCost,
+    Ingredient,
+    Product,
+    RecipeItem,
+    Scenario,
+    SeasonalityFactor,
+    TrafficAssumption,
+)
+from marginal.schemas import (
     FixedCostCreate,
     IngredientCreate,
     ProductCreate,
@@ -13,15 +22,6 @@ from advisor.schemas import (
     ScenarioUpdate,
     SeasonalityFactorCreate,
     TrafficAssumptionCreate,
-)
-from models import (
-    FixedCost,
-    Ingredient,
-    Product,
-    RecipeItem,
-    Scenario,
-    SeasonalityFactor,
-    TrafficAssumption,
 )
 
 

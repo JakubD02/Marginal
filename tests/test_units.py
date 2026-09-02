@@ -1,7 +1,7 @@
 import pytest
 
-from enums import Unit
-from units import convert
+from marginal.enums import Unit
+from marginal.units import convert
 
 
 def test_convert_kg_to_grams():

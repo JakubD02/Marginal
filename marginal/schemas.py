@@ -12,7 +12,7 @@ from constants import (
     PRICE_DECIMAL_PLACES,
     PRICE_MAX_DIGITS,
 )
-from enums import CostCategory, Month, Unit
+from marginal.enums import CostCategory, Month, Unit
 
 
 # ----- scenario -----

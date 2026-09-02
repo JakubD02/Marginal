@@ -1,10 +1,10 @@
 import sys
 
-from calculations import (
+from marginal.calculations import (
     run_simulation,
 )
-from database import get_session
-from repository import get_products_by_scenario, get_scenario_by_name
+from marginal.database import get_session
+from marginal.repository import get_products_by_scenario, get_scenario_by_name
 
 with get_session() as session:
     scenario = get_scenario_by_name(session, "Ice cream parlor 59")

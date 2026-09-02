@@ -2,9 +2,9 @@ from decimal import Decimal
 
 from sqlalchemy import select
 
-from database import get_session
-from enums import CostCategory, Unit
-from models import FixedCost, Ingredient, Product, RecipeItem, Scenario
+from marginal.database import get_session
+from marginal.enums import CostCategory, Unit
+from marginal.models import FixedCost, Ingredient, Product, RecipeItem, Scenario
 
 with get_session() as session:
     scenario = Scenario(name="Ice cream test", currency="PLN")
