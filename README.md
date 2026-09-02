@@ -1,4 +1,5 @@
 # Marginal
+![CI](https://github.com/JakubD02/marginal/actions/workflows/linting.yml/badge.svg)
 
 A Python CLI for small business profitability analysis. Model your business as a scenario with products, costs, and traffic assumptions - then run monthly and annual P&L simulations with break-even analysis.
 
@@ -40,20 +41,33 @@ alembic upgrade head
 ### Load example scenario
 
 ```bash
-python -m scripts.seed
+seed
+```
+
+Or with the full module path:
+
+```bash
+python -m marginal.scripts.seed
 ```
 
 This creates an ice cream parlor scenario with 8 ingredients, seasonal traffic (2.5x in July), and 5000 PLN monthly fixed costs.
 
-### Run a simulation
+## Run a simulation
 
 ```bash
-python -m cli simulate "Ice cream parlor 59"
+marginal simulate "Ice cream parlor 59"
+```
+
+Or without the entry point:
+
+```bash
+python -m marginal.cli simulate "Ice cream parlor 59"
 ```
 
 Output:
-
+```
 ============================================================
+
 Ice cream parlor 59 (PLN)
 
 Fixed costs: 5000 PLN/month
@@ -69,64 +83,65 @@ Month Portions Revenue Variable Profit
 ...
 
 Annual 87840 8681 24159
-
+```
 
 ## Commands
 
 ### Scenarios
 
 ```bash
-python -m cli scenario list
-python -m cli scenario show "Ice cream parlor 59"
-python -m cli scenario create "Cafe Milano" --currency EUR --working-days 24
-python -m cli scenario update "Cafe Milano" --working-days 26
-python -m cli scenario delete "Cafe Milano" --force
+marginal scenario list
+marginal scenario show "Ice cream parlor 59"
+marginal scenario create "Cafe Milano" --currency EUR --working-days 24
+marginal scenario update "Cafe Milano" --working-days 26
+marginal scenario delete "Cafe Milano" --force
 ```
 
 ### Products
 
 ```bash
-python -m cli product list "Ice cream parlor 59"
-python -m cli product get "Ice cream parlor 59" "Strawberry ice cream scoop"
-python -m cli product create "Cafe Milano" "Espresso" --price 8 --category food --wastage 0.03
-python -m cli product update "Cafe Milano" "Espresso" --price 9
-python -m cli product delete "Cafe Milano" "Espresso"
+marginal product list "Ice cream parlor 59"
+marginal product get "Ice cream parlor 59" "Strawberry ice cream scoop"
+marginal product create "Cafe Milano" "Espresso" --price 8 --category food --wastage 0.03
+marginal product update "Cafe Milano" "Espresso" --price 9
+marginal product delete "Cafe Milano" "Espresso"
 ```
 
 ### Fixed costs
 
 ```bash
-python -m cli fixed-cost list "Ice cream parlor 59"
-python -m cli fixed-cost add "Ice cream parlor 59" "Insurance" 200 --category insurance
-python -m cli fixed-cost delete "Ice cream parlor 59" "Insurance"
+marginal fixed-cost list "Ice cream parlor 59"
+marginal fixed-cost add "Ice cream parlor 59" "Insurance" 200 --category insurance
+marginal fixed-cost delete "Ice cream parlor 59" "Insurance"
 ```
 
 ### Traffic & seasonality
 
 ```bash
-python -m cli traffic-assumption set "Ice cream parlor 59" --customers 150 --avg-product 2.5
-python -m cli traffic-assumption get "Ice cream parlor 59"
+marginal traffic-assumption set "Ice cream parlor 59" --customers 150 --avg-product 2.5
+marginal traffic-assumption get "Ice cream parlor 59"
 
-python -m cli seasonality set "Ice cream parlor 59" --month 7 --multiplier 2.5
-python -m cli seasonality list "Ice cream parlor 59"
+marginal seasonality set "Ice cream parlor 59" --month 7 --multiplier 2.5
+marginal seasonality list "Ice cream parlor 59"
 ```
 
 ### Full simulation
 
 ```bash
-python -m cli simulate "Ice cream parlor 59"
+marginal simulate "Ice cream parlor 59"
 ```
 
 ## Architecture
 
-Marginal follows a layered architecture:
+Marginal follows a layered architecture, with all code organized under the `marginal/` package:
 
-- **`models.py`** — SQLAlchemy 2.0 domain entities (Scenario, Product, Ingredient, RecipeItem, FixedCost, TrafficAssumption, SeasonalityFactor)
-- **`repository.py`** — data access layer with eager loading via `selectinload`
-- **`calculations.py`** — pure functions for unit cost, contribution margin, BEP, monthly P&L
-- **`presenters.py`** — display formatting (plain print, Rich planned)
-- **`cli.py`** — Typer-based CLI with sub-apps for each entity
-- **`advisor/schemas.py`** — Pydantic v2 schemas for validation
+- **`marginal/models.py`** — SQLAlchemy 2.0 domain entities (Scenario, Product, Ingredient, RecipeItem, FixedCost, TrafficAssumption, SeasonalityFactor)
+- **`marginal/repository.py`** — data access layer with eager loading via `selectinload`
+- **`marginal/calculations.py`** — pure functions for unit cost, contribution margin, BEP, monthly P&L
+- **`marginal/presenters.py`** — display formatting (plain print, Rich planned)
+- **`marginal/cli.py`** — Typer-based CLI with sub-apps for each entity
+- **`marginal/schemas.py`** — Pydantic v2 schemas for validation
+- **`marginal/scripts/`** — utility scripts (seed data, smoke tests)
 - **`alembic/`** — database migrations
 
 Financial calculations use `Decimal` throughout to avoid float precision errors.
@@ -140,6 +155,7 @@ Financial calculations use `Decimal` throughout to avoid float precision errors.
 - SQLite (persistence)
 - Alembic (migrations)
 - Ruff (linting and formatting)
+- GitHub Actions (CI/CD)
 
 ## Roadmap
 

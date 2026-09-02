@@ -2,11 +2,36 @@
 name = "marginal"
 version = "0.1.0"
 description = "Business profitability simulator with AI advisor"
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Jakub Dudicz" },
+]
+
+dependencies = [
+    "sqlalchemy>=2.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "typer>=0.9",
+    "alembic>=1.13",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.5",
+    "pytest>=8.0",
+]
 
 [project.scripts]
-seed = "scripts.seed:seed"
-smoke-test = "scripts.smoke_test:main"
+marginal = "marginal.cli:app"
+seed = "marginal.scripts.seed:seed"
+smoke-test = "marginal.scripts.smoke_test:main"
+
+[tool.setuptools.packages.find]
+include = ["marginal*"]
+exclude = ["alembic*", "tests*", "venv*", ".venv*", "advisor*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

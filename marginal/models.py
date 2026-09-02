@@ -15,7 +15,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from constants import (
+from marginal.constants import (
     CURRENCY_CODE_LENGTH,
     NAME_MAX_LENGTH,
     NOTES_MAX_LENGTH,

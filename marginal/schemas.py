@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from constants import (
+from marginal.constants import (
     CURRENCY_CODE_LENGTH,
     NAME_MAX_LENGTH,
     NAME_MIN_LENGTH,
