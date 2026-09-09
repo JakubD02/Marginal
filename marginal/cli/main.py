@@ -1,6 +1,5 @@
 import typer
 
-from marginal.cli.simulate import simulate
 from marginal.cli.commands import (
     fixed_cost_app,
     product_app,
@@ -8,6 +7,7 @@ from marginal.cli.commands import (
     seasonality_app,
     traffic_assumption_app,
 )
+from marginal.cli.simulate import simulate
 
 app = typer.Typer(help="Marginal - business profitability simulator")
 
