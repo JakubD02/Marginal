@@ -1,4 +1,3 @@
-
 from marginal.cli.helpers import _get_scenario_or_exit
 from marginal.database import get_session
 from marginal.schemas import ScenarioExport
