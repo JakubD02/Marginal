@@ -25,4 +25,4 @@ class SeasonalityFactorRead(SeasonalityFactorBase):
 
 
 class SeasonalityFactorExport(SeasonalityFactorBase):
-    pass
+    model_config = ConfigDict(from_attributes=True)

@@ -53,4 +53,4 @@ class FixedCostRead(FixedCostBase):
 
 
 class FixedCostExport(FixedCostBase):
-    pass
+    model_config = ConfigDict(from_attributes=True)

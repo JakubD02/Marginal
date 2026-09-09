@@ -24,4 +24,4 @@ class TrafficAssumptionRead(TrafficAssumptionBase):
 
 
 class TrafficAssumptionExport(TrafficAssumptionBase):
-    pass
+    model_config = ConfigDict(from_attributes=True)

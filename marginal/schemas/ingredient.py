@@ -53,4 +53,4 @@ class IngredientRead(IngredientBase):
 
 
 class IngredientExport(IngredientBase):
-    pass
+    model_config = ConfigDict(from_attributes=True)
