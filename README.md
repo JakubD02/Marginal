@@ -190,17 +190,17 @@ Currently the simulator assumes all products sell in equal proportion — a naiv
 - **Per-product BEP breakdown** - shows exactly how many units of each product must sell to break even, not just a total
 - **Validation** - sales shares are enforced to sum to 1.0 per scenario, with clear error messages
 
-### v0.4 — probabilistic simulation and snapshots (planning)
+### v0.4 - probabilistic simulation and snapshots (planning)
 
 Current simulation is **deterministic** — same inputs always produce the same profit. But real businesses face uncertainty: customer counts vary day-to-day, wastage fluctuates, sales mix shifts. A single "profit = 12,430 PLN" answer hides the range of possible outcomes.
 
 v0.4 introduces Monte Carlo simulation and scenario snapshots for versioning and comparison.
 
-**Monte Carlo simulation** — run the same scenario thousands of times with randomized inputs:
-- **Distribution-based inputs** — `daily_customers ~ Normal(100, 15)`, `wastage ~ Normal(5%, 1%)`, sales shares with variability
-- **Configurable iterations** — `marginal simulate "Cafe" --monte-carlo --iterations 10000`
-- **Compare runs** — `marginal simulation compare <id1> <id2>` shows diff of inputs and outputs side-by-side
-- **Restore state** — `marginal simulation restore <id>` reverts scenario to snapshot's inputs (useful for "what changed after price hike?")
+**Monte Carlo simulation** - run the same scenario thousands of times with randomized inputs:
+- **Distribution-based inputs** - `daily_customers ~ Normal(100, 15)`, `wastage ~ Normal(5%, 1%)`, sales shares with variability
+- **Configurable iterations** - `marginal simulate "Cafe" --monte-carlo --iterations 10000`
+- **Compare runs** - `marginal simulation compare <id1> <id2>` shows diff of inputs and outputs side-by-side
+- **Restore state** - `marginal simulation restore <id>` reverts scenario to snapshot's inputs (useful for "what changed after price hike?")
 
 
 ### v0.5 - AI-powered advisor
