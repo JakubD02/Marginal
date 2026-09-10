@@ -66,6 +66,7 @@ def sample_product(session, sample_scenario, sample_ingredient):
         price=Decimal("10.00"),
         category="drink",
         wastage_pct=0.0,
+        expected_sales_share=1.0,
     )
     session.add(product)
     session.flush()
