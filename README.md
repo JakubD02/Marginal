@@ -123,8 +123,8 @@ marginal simulate "Ice cream parlor 59"
 ### Export
 
 ```bash
-marginal export scenario "Ice cream parlor 59"
-marginal export scenario "Ice cream parlor 59" --output backup.json
+marginal export-json "Ice cream parlor 59"
+marginal export-json "Ice cream parlor 59" --output backup.json
 ```
 
 Exports a complete scenario snapshot (products, ingredients, recipes, fixed costs, traffic, seasonality) to JSON. Useful for backups, sharing configurations, or re-importing in another environment.
@@ -181,7 +181,7 @@ Financial calculations use `Decimal` throughout to avoid float precision errors.
 - JSON export for scenario backups
 - Comprehensive README with usage examples
 
-### v0.3 - realistic sales modeling (planning)
+### v0.3 - realistic sales modeling (current)
 
 Currently the simulator assumes all products sell in equal proportion — a naive arithmetic average. Real businesses have uneven demand: 60% of ice cream customers may buy vanilla, only 10% pick premium flavors. This distorts BEP calculations by 10-20% in practice.
 
@@ -190,13 +190,18 @@ Currently the simulator assumes all products sell in equal proportion — a naiv
 - **Per-product BEP breakdown** - shows exactly how many units of each product must sell to break even, not just a total
 - **Validation** - sales shares are enforced to sum to 1.0 per scenario, with clear error messages
 
-### v0.4 - tax and pricing realism
+### v0.4 — probabilistic simulation and snapshots (planning)
 
-Financial simulations currently show gross figures — no tax handling. For Polish (and most EU) small businesses, VAT is a first-class concern that affects pricing decisions and cashflow.
+Current simulation is **deterministic** — same inputs always produce the same profit. But real businesses face uncertainty: customer counts vary day-to-day, wastage fluctuates, sales mix shifts. A single "profit = 12,430 PLN" answer hides the range of possible outcomes.
 
-- **VAT rates per product** - configurable VAT rate (0%, 5%, 8%, 23% in Poland) with default per scenario
-- **Net vs gross price separation** - `price_gross` shown to customer, `price_net` used for margin calculation
-- **VAT liability in P&L** - monthly VAT owed to tax authority separated from net profit
+v0.4 introduces Monte Carlo simulation and scenario snapshots for versioning and comparison.
+
+**Monte Carlo simulation** — run the same scenario thousands of times with randomized inputs:
+- **Distribution-based inputs** — `daily_customers ~ Normal(100, 15)`, `wastage ~ Normal(5%, 1%)`, sales shares with variability
+- **Configurable iterations** — `marginal simulate "Cafe" --monte-carlo --iterations 10000`
+- **Compare runs** — `marginal simulation compare <id1> <id2>` shows diff of inputs and outputs side-by-side
+- **Restore state** — `marginal simulation restore <id>` reverts scenario to snapshot's inputs (useful for "what changed after price hike?")
+
 
 ### v0.5 - AI-powered advisor
 
