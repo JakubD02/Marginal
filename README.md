@@ -17,8 +17,11 @@ Instead of building a spreadsheet from scratch, Marginal provides a domain-model
 - **Traffic assumptions** - daily customers × products per customer
 - **Seasonality factors** - monthly multipliers for realistic revenue projections
 - **Full simulation** - contribution margin, BEP, monthly and annual P&L
+- **JSON export** - back up scenarios or share configurations
 - **Persistent storage** - SQLite with Alembic migrations
 - **Interactive CLI** - Typer-based with `--help` for every command
+- **Tested** - pytest suite for calculations and repository layer
+- **CI/CD** - GitHub Actions runs lint and tests on every push
 
 ## Quickstart
 
@@ -44,30 +47,16 @@ alembic upgrade head
 seed
 ```
 
-Or with the full module path:
-
-```bash
-python -m marginal.scripts.seed
-```
-
 This creates an ice cream parlor scenario with 8 ingredients, seasonal traffic (2.5x in July), and 5000 PLN monthly fixed costs.
 
-## Run a simulation
+### Run a simulation
 
 ```bash
 marginal simulate "Ice cream parlor 59"
 ```
-
-Or without the entry point:
-
-```bash
-python -m marginal.cli simulate "Ice cream parlor 59"
 ```
-
 Output:
-```
 ============================================================
-
 Ice cream parlor 59 (PLN)
 
 Fixed costs: 5000 PLN/month
@@ -131,6 +120,15 @@ marginal seasonality list "Ice cream parlor 59"
 marginal simulate "Ice cream parlor 59"
 ```
 
+### Export
+
+```bash
+marginal export scenario "Ice cream parlor 59"
+marginal export scenario "Ice cream parlor 59" --output backup.json
+```
+
+Exports a complete scenario snapshot (products, ingredients, recipes, fixed costs, traffic, seasonality) to JSON. Useful for backups, sharing configurations, or re-importing in another environment.
+
 ## Architecture
 
 Marginal follows a layered architecture, with all code organized under the `marginal/` package:
@@ -139,10 +137,17 @@ Marginal follows a layered architecture, with all code organized under the `marg
 - **`marginal/repository.py`** — data access layer with eager loading via `selectinload`
 - **`marginal/calculations.py`** — pure functions for unit cost, contribution margin, BEP, monthly P&L
 - **`marginal/presenters.py`** — display formatting (plain print, Rich planned)
-- **`marginal/cli.py`** — Typer-based CLI with sub-apps for each entity
-- **`marginal/schemas.py`** — Pydantic v2 schemas for validation
+- **`marginal/cli/`** — Typer-based CLI split by entity
+  - `main.py` — app initialization and sub-app registration
+  - `helpers.py` — shared helpers (scenario/product lookup)
+  - `simulate.py` — top-level simulate command
+  - `commands/` — sub-app modules per entity (scenario, product, fixed_cost, traffic, seasonality)
+- **`marginal/schemas/`** — Pydantic v2 schemas split by entity
+  - One file per entity with Base/Create/Update/Read/Export pattern
+- **`marginal/exporters/`** — JSON export for scenario backups
 - **`marginal/scripts/`** — utility scripts (seed data, smoke tests)
 - **`alembic/`** — database migrations
+- **`tests/`** — pytest suite with in-memory SQLite fixtures
 
 Financial calculations use `Decimal` throughout to avoid float precision errors.
 
@@ -154,12 +159,13 @@ Financial calculations use `Decimal` throughout to avoid float precision errors.
 - Typer (CLI framework)
 - SQLite (persistence)
 - Alembic (migrations)
+- pytest (testing)
 - Ruff (linting and formatting)
 - GitHub Actions (CI/CD)
 
 ## Roadmap
 
-### v0.1 (current)
+### v0.1 - MVP
 
 - Domain model with 7 entities
 - Repository pattern with eager loading
@@ -167,40 +173,40 @@ Financial calculations use `Decimal` throughout to avoid float precision errors.
 - Full CLI CRUD for all entities
 - Deterministic simulation output
 
-### v0.2 (next)
+### v0.2 - quality and portability (current)
 
-- pytest test suite for calculations and repository layer
-- GitHub Actions CI (test + lint on every push)
-- Export commands (`marginal export --format json/csv/html`)
+- Modular package structure (cli/, schemas/, exporters/)
+- pytest test suite for calculations and repository layers
+- GitHub Actions CI (lint + test on every push)
+- JSON export for scenario backups
+- Comprehensive README with usage examples
 
-
-### v0.3 — realistic sales modeling (planning)
+### v0.3 - realistic sales modeling (planning)
 
 Currently the simulator assumes all products sell in equal proportion — a naive arithmetic average. Real businesses have uneven demand: 60% of ice cream customers may buy vanilla, only 10% pick premium flavors. This distorts BEP calculations by 10-20% in practice.
 
-- **`expected_sales_share` field on Product** — each product declares its % of total scenario sales (must sum to 1.0)
-- **Weighted contribution margin** — replaces arithmetic mean with sales-share-weighted average
-- **Per-product BEP breakdown** — shows exactly how many units of each product must sell to break even, not just a total
-- **Validation** — sales shares are enforced to sum to 1.0 per scenario, with clear error messages
+- **`expected_sales_share` field on Product** - each product declares its % of total scenario sales (must sum to 1.0)
+- **Weighted contribution margin** - replaces arithmetic mean with sales-share-weighted average
+- **Per-product BEP breakdown** - shows exactly how many units of each product must sell to break even, not just a total
+- **Validation** - sales shares are enforced to sum to 1.0 per scenario, with clear error messages
 
-
-### v0.4 — tax and pricing realism
+### v0.4 - tax and pricing realism
 
 Financial simulations currently show gross figures — no tax handling. For Polish (and most EU) small businesses, VAT is a first-class concern that affects pricing decisions and cashflow.
 
-- **VAT rates per product** — configurable VAT rate (0%, 5%, 8%, 23% in Poland) with default per scenario
-- **Net vs gross price separation** — `price_gross` shown to customer, `price_net` used for margin calculation
-- **VAT liability in P&L** — monthly VAT owed to tax authority separated from net profit
+- **VAT rates per product** - configurable VAT rate (0%, 5%, 8%, 23% in Poland) with default per scenario
+- **Net vs gross price separation** - `price_gross` shown to customer, `price_net` used for margin calculation
+- **VAT liability in P&L** - monthly VAT owed to tax authority separated from net profit
 
-### v0.5 — AI-powered advisor
+### v0.5 - AI-powered advisor
 
 Once the simulation model is complete, adding an LLM as an analysis layer becomes powerful. The simulator produces structured business data; Claude interprets it and suggests optimizations.
 
-- **`marginal advise <scenario>` command** — sends full scenario context to Anthropic API, returns 3-5 actionable recommendations
-- **Streaming output** — recommendations appear progressively via Rich
-- **Contextual suggestions** — "your wastage of 8% is high for gastro industry; reducing to 5% would save ~2400 PLN annually"
-- **What-if exploration** — `marginal advise --what-if "price up 10%"` runs a simulation variant and explains impact
-- **Tool use** — Claude can invoke calculations directly, e.g. re-run simulation with modified parameters mid-conversation
+- **`marginal advise <scenario>` command** - sends full scenario context to Anthropic API, returns 3-5 actionable recommendations
+- **Streaming output** - recommendations appear progressively via Rich
+- **Contextual suggestions** - "your wastage of 8% is high for gastro industry; reducing to 5% would save ~2400 PLN annually"
+- **What-if exploration** - `marginal advise --what-if "price up 10%"` runs a simulation variant and explains impact
+- **Tool use** - Claude can invoke calculations directly, e.g. re-run simulation with modified parameters mid-conversation
 
 ### Long-term vision
 
@@ -208,14 +214,32 @@ Marginal aims to become the tool a small business owner opens **before** signing
 
 ## Development
 
-```bash
-# Install dev dependencies
-pip install -e ".[dev]"
+### Install with dev dependencies
 
-# Run linter
+```bash
+pip install -e ".[dev]"
+```
+
+### Run linter
+
+```bash
 ruff check .
 ruff format .
-
-# Run tests (coming in v0.2)
-pytest
 ```
+
+### Run tests
+
+```bash
+pytest                                # all tests
+pytest tests/test_calculations.py     # single file
+pytest -v                             # verbose output
+pytest -k "margin"                    # tests matching pattern
+```
+
+Tests use in-memory SQLite for isolation - no impact on your development database.
+
+### CI/CD
+
+Every push and pull request triggers GitHub Actions workflow which runs:
+- `ruff check .` and `ruff format --check .`
+- `pytest` on Python 3.13
