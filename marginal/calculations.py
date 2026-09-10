@@ -41,7 +41,6 @@ class SimulationResult:
 
 
 def compute_unit_cost(product) -> Decimal:
-    """alculate cost of manufacturing one portion"""
     total = Decimal(0)
 
     for item in product.recipe_items:
@@ -63,20 +62,17 @@ def compute_unit_cost(product) -> Decimal:
 
 
 def compute_product_margin(product) -> float:
-    """Calculate profit margin for a single product"""
     item_cost = compute_unit_cost(product)
     return float((product.price - item_cost) / product.price)
 
 
 def compute_product_contribution_margin(product) -> ContributionMargin:
-    """Calculate contribution margin for a single product"""
     per_portion = product.price - compute_unit_cost(product)
     ratio = compute_product_margin(product)
     return ContributionMargin(per_portion=per_portion, ratio=ratio)
 
 
 def compute_scenario_contribution_margin(scenario) -> ContributionMargin:
-    """Average contribution margin across all products in scenario"""
     products = scenario.products
     if not products:
         raise ValueError("Scenario has no products!")
@@ -90,7 +86,6 @@ def compute_scenario_contribution_margin(scenario) -> ContributionMargin:
 
 
 def get_fixed_costs(scenario) -> Decimal:
-    """To get all fixed costs in choosen scenario"""
     total = Decimal(0)
     for cost in scenario.fixed_costs:
         total += cost.amount
@@ -98,7 +93,6 @@ def get_fixed_costs(scenario) -> Decimal:
 
 
 def compute_bep(scenario) -> int:
-    """To get compute bep (by month), at beginning margin is calculated by average of items"""
     fixed_costs = get_fixed_costs(scenario)
     cm = compute_scenario_contribution_margin(scenario)
 
@@ -114,7 +108,6 @@ def compute_bep(scenario) -> int:
 
 
 def _get_seasonality_for_month(scenario, month: int) -> float:
-    """Get seasonality multiplier for month, or 1.0 if not defined"""
     for factor in scenario.seasonality_factors:
         if factor.month == month:
             return factor.multiplier
@@ -122,7 +115,6 @@ def _get_seasonality_for_month(scenario, month: int) -> float:
 
 
 def compute_monthly_pnl(scenario, month: int) -> MonthlyPnL:
-    """Compute profit and loss for a specific month, accounting for seasonality"""
     if not scenario.products:
         raise ValueError("Scenario has no products")
     if not scenario.traffic_assumption:
@@ -162,8 +154,6 @@ def compute_monthly_pnl(scenario, month: int) -> MonthlyPnL:
 def run_simulation(scenario) -> SimulationResult:
     if not scenario.products:
         raise ValueError("Scenario has no products")
-    if not scenario.fixed_costs:
-        raise ValueError("Scenario has no fixed costs")
 
     annual_revenue = annual_variable_costs = annual_profit = Decimal(0)
     monthly_pnl = []
