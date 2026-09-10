@@ -151,9 +151,26 @@ def compute_monthly_pnl(scenario, month: int) -> MonthlyPnL:
     )
 
 
+def check_sales_share(products):
+    total = Decimal(0)
+    for product in products:
+        total += Decimal(str(product.expected_sales_share))
+    return abs(total - Decimal("1")) < Decimal("0.0001")
+
+
+def get_sales_share_per_scenario(products):
+    total = Decimal(0)
+    for product in products:
+        total += Decimal(str(product.expected_sales_share))
+    return total
+
+
 def run_simulation(scenario) -> SimulationResult:
     if not scenario.products:
         raise ValueError("Scenario has no products")
+
+    if not check_sales_share(scenario.products):
+        raise ValueError("Cannot run simulation: Total expected sales must be 100%")
 
     annual_revenue = annual_variable_costs = annual_profit = Decimal(0)
     monthly_pnl = []

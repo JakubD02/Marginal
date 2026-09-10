@@ -21,6 +21,7 @@ class ProductBase(BaseModel):
     )
     category: str = Field(min_length=NAME_MIN_LENGTH, max_length=NAME_MAX_LENGTH)
     wastage_pct: float = Field(default=0.0, ge=0.0, le=1.0)
+    expected_sales_share: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class ProductCreate(ProductBase):
@@ -41,6 +42,7 @@ class ProductUpdate(BaseModel):
         default=None, min_length=NAME_MIN_LENGTH, max_length=NAME_MAX_LENGTH
     )
     wastage_pct: float | None = Field(default=None, ge=0.0, le=1.0)
+    expected_sales_share: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class ProductRead(ProductBase):
