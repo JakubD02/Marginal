@@ -19,7 +19,11 @@ scenario_app = typer.Typer(help="Manage scenarios")
 
 @scenario_app.command("list")
 def scenario_list():
-    """List all scenarios"""
+    """List all scenarios.
+
+    Example:
+        marginal scenario list
+    """
     with get_session() as session:
         scenarios = list_scenarios(session)
         if not scenarios:
@@ -31,7 +35,11 @@ def scenario_list():
 
 @scenario_app.command("show")
 def scenario_show(scenario_name: str):
-    """Show scenario details"""
+    """Show detailed information about a specific scenario.
+
+    Example:
+        marginal scenario show my-scenario
+    """
     with get_session() as session:
         scenario = _get_scenario_or_exit(session, scenario_name)
         show_scenario(get_scenario_with_all(session, scenario.id))
@@ -42,6 +50,11 @@ def scenario_delete(
     scenario_name: str,
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
 ):
+    """Delete an existing scenario by name.
+
+    Example:
+        marginal scenario delete my-scenario --force
+    """
     with get_session() as session:
         scenario = _get_scenario_or_exit(session, scenario_name)
         if not force:
@@ -66,6 +79,11 @@ def scenario_create(
         22, "--working-days", "-w", help="Working days per month"
     ),
 ):
+    """Create a new scenario with specified currency and working days.
+
+    Example:
+        marginal scenario create my-scenario --currency EUR --working-days 20
+    """
     with get_session() as session:
         existing = get_scenario_by_name(session, scenario_name)
         if existing:
@@ -92,6 +110,11 @@ def scenario_update(
     currency: str | None = typer.Option(None, "--currency", "-c"),
     working_days: int | None = typer.Option(None, "--working-days", "-w"),
 ):
+    """Update an existing scenario's details (name, currency, or working days).
+
+    Example:
+        marginal scenario update my-scenario --name updated-name -c USD
+    """
     with get_session() as session:
         scenario = _get_scenario_or_exit(session, scenario_name)
 
