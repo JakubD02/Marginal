@@ -1,3 +1,4 @@
+from marginal.calculations import check_sales_share
 from marginal.cli.helpers import _get_scenario_or_exit
 from marginal.database import get_session
 from marginal.schemas import ScenarioExport
@@ -8,9 +9,11 @@ from marginal.schemas.seasonality_factor import SeasonalityFactorExport
 from marginal.schemas.traffic_assumption import TrafficAssumptionExport
 
 
-def export_scenario_to_json(scenario_name: str):
+def export_scenario_to_json(scenario_name: str, output_path: str | None = None):
     with get_session() as session:
         scenario = _get_scenario_or_exit(session, scenario_name)
+        if scenario.products and not check_sales_share(scenario.products):
+            raise ValueError("Cannot run simulation: Total expected sales must be 100%")
         exported_data = ScenarioExport(
             name=scenario.name,
             currency=scenario.currency,
@@ -32,8 +35,13 @@ def export_scenario_to_json(scenario_name: str):
                 for x in scenario.seasonality_factors
             ],
         )
+        if output_path is None:
+            safe_name = scenario_name.replace(" ", "_").replace("/", "_")
+            output_path = f"{safe_name}.json"
 
         json_output = exported_data.model_dump_json(indent=3)
 
         with open("scenario_export.json", "w", encoding="utf-8") as f:
             f.write(json_output)
+
+        return output_path

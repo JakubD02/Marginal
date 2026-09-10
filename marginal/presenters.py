@@ -96,21 +96,28 @@ def show_product(product: Product) -> None:
 
 def render_products(products: list[Product], currency: str) -> None:
     """Display list of products in a scenario as a table."""
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 85)
     print(" PRODUCTS ")
-    print("=" * 70)
-    print(f"{'Name':<35} {'Price':>10} {'Category':<15} {'Wastage':>7}")
-    print("-" * 70)
+    print("=" * 85)
+    print(
+        f"{'Name':<35} "
+        f"{'Price':>10} "
+        f"{'Category':<15} "
+        f"{'Wastage':>10} "
+        f"{'Sales Share':>12}"
+    )
+    print("-" * 85)
 
     for product in products:
         print(
             f"{product.name:<35} "
             f"{product.price:>7.2f} {currency:<3} "
             f"{product.category:<15} "
-            f"{product.wastage_pct * 100:>5.1f}%"
+            f"{product.wastage_pct * 100:>8.1f}% "
+            f"{product.expected_sales_share * 100:>10.1f}%"
         )
 
-    print("=" * 70 + "\n")
+    print("=" * 85 + "\n")
 
 
 def render_fixed_costs(costs: list[FixedCost], currency: str) -> None:
@@ -178,3 +185,24 @@ def render_seasonality(factors: list[SeasonalityFactor]) -> None:
         print(f"{name:<15} {factor.multiplier:>10.2f}{marker}")
 
     print("=" * 40 + "\n")
+
+
+def render_expected_sales_shares(products: list[Product], currency: str) -> None:
+    """Display expected sales shares for all products and the total sum."""
+    print("\n" + "=" * 50)
+    print(" EXPECTED SALES SHARES ")
+    print("=" * 50)
+    print(f"{'Product Name':<30} {'Share':>15}")
+    print("-" * 50)
+
+    total = 0.0
+    for product in products:
+        share_pct = product.expected_sales_share * 100
+        total += share_pct
+        print(f"{product.name:<30} {share_pct:>14.1f}%")
+
+    print("-" * 50)
+
+    status_mark = "✓" if abs(total - 100.0) < 1e-5 else "✗ (must be 100%)"
+    print(f"{'Total':<30} {total:>14.1f}%  {status_mark}")
+    print("=" * 50 + "\n")
