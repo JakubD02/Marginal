@@ -102,6 +102,9 @@ class Product(Base):
     )
     category: Mapped[str] = mapped_column(String(NAME_MAX_LENGTH), nullable=False)
     wastage_pct: Mapped[float] = mapped_column(nullable=False, default=0.0)
+    expected_sales_share: Mapped[float] = mapped_column(
+        nullable=False, default=Decimal("0.0"), server_default="0.0"
+    )
 
     scenario: Mapped["Scenario"] = relationship(back_populates="products")
     recipe_items: Mapped[list["RecipeItem"]] = relationship(
