@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from marginal.enums import CostCategory, Month, Unit
 from marginal.models import (
     Base,
     FixedCost,
@@ -14,7 +15,6 @@ from marginal.models import (
     SeasonalityFactor,
     TrafficAssumption,
 )
-from marginal.enums import CostCategory, Month, Unit
 
 
 @pytest.fixture

@@ -1,8 +1,6 @@
 from decimal import Decimal
 
-import pytest
-
-from marginal.enums import CostCategory, Month, Unit
+from marginal.enums import CostCategory, Month
 from marginal.repository import (
     add_fixed_cost,
     add_product,
@@ -85,9 +83,7 @@ class TestScenarioCRUD:
         assert result is True
         assert get_scenario_by_name(session, "Test Cafe") is None
 
-    def test_get_scenario_with_all_loads_relations(
-        self, session, full_scenario
-    ):
+    def test_get_scenario_with_all_loads_relations(self, session, full_scenario):
         loaded = get_scenario_with_all(session, full_scenario.id)
 
         assert loaded is not None
@@ -114,9 +110,7 @@ class TestProductCRUD:
         assert product.name == "Cappuccino"
 
     def test_get_product_by_name_found(self, session, sample_product, sample_scenario):
-        found = get_product_by_name_in_scenario(
-            session, sample_scenario.id, "Espresso"
-        )
+        found = get_product_by_name_in_scenario(session, sample_scenario.id, "Espresso")
 
         assert found is not None
         assert found.id == sample_product.id

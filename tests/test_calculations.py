@@ -1,10 +1,9 @@
 from decimal import Decimal
 
 from marginal.calculations import run_simulation
-from marginal.models import SeasonalityFactor, TrafficAssumption
-from marginal.enums import Month
-from marginal.models import FixedCost, SeasonalityFactor, TrafficAssumption
 from marginal.enums import CostCategory, Month
+from marginal.models import FixedCost, SeasonalityFactor, TrafficAssumption
+
 
 class TestSimulation:
     def test_simulation_returns_result(self, full_scenario):
@@ -61,6 +60,7 @@ class TestContributionMargin:
         assert result.contribution_margin.ratio < 1.0
         assert result.contribution_margin.ratio > 0.0
 
+
 class TestMonthlyPnL:
     def test_monthly_pnl_has_month_field(self, full_scenario):
         result = run_simulation(full_scenario)
@@ -83,7 +83,6 @@ class TestMonthlyPnL:
     def test_seasonality_affects_revenue(
         self, session, sample_scenario, sample_product
     ):
-
 
         session.add(
             FixedCost(
